@@ -27,12 +27,13 @@ void PythonThread::run()
     sendMessage(qList[0]);
     sendMessage(qList[1]);
 
-    QProcess p;
+    pyProcess = new QProcess;
+    //QProcess p;
 
 #ifdef __unix__ /* __unix__ is usually defined by compilers targeting Unix systems */
-    QString python = "python";
+    QString python = "python -u";
 #elif defined _WIN32 /* _WIN32 is usually defined by compilers targeting 32 or 64 bit Windows systems */
-    QString python = "c:/python27/python";
+    QString python = "c:/python27/python -u";
 #endif
 
     QString pythonCommand = python + " " + qList[0] + " " + qList[1];
@@ -52,20 +53,26 @@ void PythonThread::run()
     foreach( env_variable, paths_list )
         sendMessage( env_variable);
 */
-    p.execute(pythonCommand);
-    //p.start(python,arg);
-    //p.start(pythonCommand);
+    //pyProcess->setProcessChannelMode(QProcess::ForwardedChannels);
+    //connect(pyProcess,SIGNAL(readyReadStandardOutput()),this,SLOT(liveReader()));
+    connect(pyProcess,SIGNAL(readyRead()),this,SLOT(liveReader()));
+
+    //pyProcess->execute(pythonCommand);
+    //p.execute(pythonCommand);
+    //p.execute(python,arg);
+    pyProcess->start(pythonCommand);
     //p.startDetached(pythonCommand);
     //p.execute(qList[0],arg);
 
     //QString p_stdout;
     //p.waitForReadyRead();
+    pyProcess->waitForReadyRead();
 
     //p_stdout = p.readAllStandardOutput();
     //sendMessage(p_stdout);
 
-    p.waitForFinished(-1);
-
+    pyProcess->waitForFinished();
+    //p.waitForFinished(-1);
     //p_stdout = p.readAllStandardOutput();
     //sendMessage(p_stdout);
 
@@ -77,10 +84,15 @@ void PythonThread::run()
         destDir = qList[2]+"/"+qList[1];
         QFile::rename(srcDir,destDir);
     }
-    sendMessage(qList[0]+" "+stoq("finish"));
+    sendMessage(qList[0]+" "+stoq("finish")+" "+qList[1]);
 }
 
 void PythonThread::setArg(QStringList inQList)
 {
     qList=inQList;
+}
+
+void PythonThread::liveReader()
+{
+    sendMessage(pyProcess->readLine());
 }
